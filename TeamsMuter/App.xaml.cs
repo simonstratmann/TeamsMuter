@@ -61,7 +61,47 @@ namespace TeamsMuter {
         [DllImport("shcore.dll")]
         private static extern int SetProcessDpiAwareness(ProcessDPIAwareness value);
         
-
+        [StructLayout(LayoutKind.Sequential)]
+        public struct DEVMODE
+        {
+            private const int CCHDEVICENAME = 0x20;
+            private const int CCHFORMNAME = 0x20;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 0x20)]
+            public string dmDeviceName;
+            public short dmSpecVersion;
+            public short dmDriverVersion;
+            public short dmSize;
+            public short dmDriverExtra;
+            public int dmFields;
+            public int dmPositionX;
+            public int dmPositionY;
+            public ScreenOrientation dmDisplayOrientation;
+            public int dmDisplayFixedOutput;
+            public short dmColor;
+            public short dmDuplex;
+            public short dmYResolution;
+            public short dmTTOption;
+            public short dmCollate;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 0x20)]
+            public string dmFormName;
+            public short dmLogPixels;
+            public int dmBitsPerPel;
+            public int dmPelsWidth;
+            public int dmPelsHeight;
+            public int dmDisplayFlags;
+            public int dmDisplayFrequency;
+            public int dmICMMethod;
+            public int dmICMIntent;
+            public int dmMediaType;
+            public int dmDitherType;
+            public int dmReserved1;
+            public int dmReserved2;
+            public int dmPanningWidth;
+            public int dmPanningHeight;
+        }
+        
+        [DllImport("user32.dll")]
+        public static extern bool EnumDisplaySettings(string lpszDeviceName, int iModeNum, ref DEVMODE lpDevMode);
         
         
         public App() {
@@ -69,21 +109,33 @@ namespace TeamsMuter {
             // Mute();
             // Capture();
             var window = TopLevelWindowUtils.FindWindow(wh => wh.GetWindowText().Contains("Meeting in"));
-            var meetingScreen = Screen.FromHandle(window.RawPtr);
             RECT rect;
             GetWindowRect(new HandleRef(this, window.RawPtr), out rect);
-            Debug.Print("rect: " + rect);
-            var scalingFactor = GetScalingFactor();
-            int width = rect.Right - rect.Left + 1;
-            int height = rect.Bottom - rect.Top + 1;
+            var scalingFactor = GetScalingFactor(window);
+            int width = (int)((rect.Right - rect.Left + 1) * scalingFactor);
+            int height = (int)((rect.Bottom - rect.Top + 1) * scalingFactor);
+            rect.Left = (int)(rect.Left * scalingFactor);
+            rect.Top = (int)(rect.Top * scalingFactor);
             Console.WriteLine($"x: {rect.Left}, y: {rect.Bottom}, width: {width}, height: {height}");
             // var capture = Capture(rect.Left, rect.Bottom, width, height);
 
             // Bitmap screenshot = new ScreenCapture().GetScreenshot(window.RawPtr);
             // screenshot.Save(@"c:\temp\Capture.jpg", ImageFormat.Jpeg);
-            Capture(-1920, 1047, 800,670).Save(@"c:\temp\Capture.jpg", ImageFormat.Jpeg);
+            Capture(rect.Left, rect.Top, width, height).Save(@"c:\temp\Capture.jpg", ImageFormat.Jpeg);
+
+            Console.WriteLine(scalingFactor);
             
             Environment.Exit(0);            
+        }
+
+        private static decimal GetScalingFactor(WindowHandle window) {
+            var meetingScreen = Screen.FromHandle(window.RawPtr);
+            DEVMODE dm = new DEVMODE();
+            dm.dmSize = (short)Marshal.SizeOf(typeof(DEVMODE));
+            EnumDisplaySettings(meetingScreen.DeviceName, -1, ref dm);
+
+            var scalingFactor = Decimal.Divide(dm.dmPelsWidth, meetingScreen.Bounds.Width);
+            return scalingFactor;
         }
 
         private static Bitmap Capture(int x, int y, int width, int height) {
