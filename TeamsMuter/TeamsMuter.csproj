@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net6.0-windows</TargetFramework>
+        <Nullable>enable</Nullable>
+        <UseWPF>true</UseWPF>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="NAudio" Version="2.1.0" />
+      <PackageReference Include="NAudio.Core" Version="2.1.0" />
+      <PackageReference Include="NAudio.WinMM" Version="2.1.0" />
+      <PackageReference Include="Win32Interop.WinHandles" Version="2.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ApplicationDefinition Remove="App.xaml" />
+      <None Include="App.xaml" />
+    </ItemGroup>
+
+</Project>
