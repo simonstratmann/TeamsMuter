@@ -5,11 +5,13 @@ using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Controls;
 using System.Windows.Forms;
 using NAudio.CoreAudioApi;
 using Win32Interop.WinHandles;
@@ -21,7 +23,8 @@ namespace TeamsMuter {
     /// Interaction logic for App.xaml
     /// </summary>
     public partial class App : Application {
-        
+        private Color HAND_COLOR;
+
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool GetWindowRect(HandleRef hWnd, out RECT lpRect);
@@ -106,26 +109,46 @@ namespace TeamsMuter {
         
         public App() {
             SetProcessDpiAwareness(ProcessDPIAwareness.ProcessDPIUnaware);
-            // Mute();
-            // Capture();
-            var window = TopLevelWindowUtils.FindWindow(wh => wh.GetWindowText().Contains("Meeting in"));
+            // var window = TopLevelWindowUtils.FindWindow(wh => wh.GetWindowText().Contains("Meeting in"));
+            // if (!window.IsValid) {
+                // throw new Exception("WIndow not found");
+            // }
+            // var timer = new System.Timers.Timer(50);
+            // var scalingFactor = GetScalingFactor(window);
+            // timer.Elapsed += (sender, args) => {
+            //     var capture = CaptureWindow(window, scalingFactor);
+            // Debug.WriteLine("Captured");
+            // };
+            // timer.Start();
+            // CaptureWindow(window, scalingFactor).Save(@"c:\temp\Capture.jpg", ImageFormat.Jpeg);
+            
+            // Console.WriteLine(scalingFactor);
+            // Console.Write("Hello\n");
+            //
+            // Thread.Sleep(3000);
+            // timer.Stop();
+            // Bitmap capture = new Bitmap(@"c:\temp\Capture.jpg");
+            //462,462
+            HAND_COLOR = Color.FromArgb(255, 230, 182, 116);
+            Color yellow2 = Color.FromArgb(255, 194,147,74);
+            
+            var projectDir = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent;
+            Bitmap capture = new Bitmap(Path.Combine(projectDir.FullName,Path.GetFileName("teamsDemoHand.jpg")));
+            // capture.GetPixel(462,462)
+
+            // MainWindow mainWindow = new MainWindow();
+            // mainWindow.Show();
+        }
+
+        private Bitmap CaptureWindow(WindowHandle window, decimal scalingFactor) {
             RECT rect;
             GetWindowRect(new HandleRef(this, window.RawPtr), out rect);
-            var scalingFactor = GetScalingFactor(window);
             int width = (int)((rect.Right - rect.Left + 1) * scalingFactor);
             int height = (int)((rect.Bottom - rect.Top + 1) * scalingFactor);
             rect.Left = (int)(rect.Left * scalingFactor);
             rect.Top = (int)(rect.Top * scalingFactor);
-            Console.WriteLine($"x: {rect.Left}, y: {rect.Bottom}, width: {width}, height: {height}");
-            // var capture = Capture(rect.Left, rect.Bottom, width, height);
-
-            // Bitmap screenshot = new ScreenCapture().GetScreenshot(window.RawPtr);
-            // screenshot.Save(@"c:\temp\Capture.jpg", ImageFormat.Jpeg);
-            Capture(rect.Left, rect.Top, width, height).Save(@"c:\temp\Capture.jpg", ImageFormat.Jpeg);
-
-            Console.WriteLine(scalingFactor);
-            
-            Environment.Exit(0);            
+            Bitmap capture = Capture(rect.Left, rect.Top, width, height);
+            return capture;
         }
 
         private static decimal GetScalingFactor(WindowHandle window) {
