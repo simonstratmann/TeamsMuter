@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.Drawing;
 using System.IO;
@@ -13,7 +14,13 @@ using TesseractOCR;
 namespace TeamsMuter;
 
 public class ActiveSpeakerDetection {
+    public static Stopwatch GetSpeakerNameBoxCoordinatesStopwatch = new Stopwatch();
+    public static Stopwatch GetSpeakerRectanglesStopwatch = new Stopwatch();
+    public static Stopwatch TesseractStopwatch = new Stopwatch();
+    private static Engine engine = new Engine(@"c:\Program Files\Tesseract-OCR\tessdata\", TesseractOCR.Enums.Language.German);
+
     public List<Rectangle> GetSpeakerNameBoxCoordinates(Bitmap bitmap) {
+        GetSpeakerNameBoxCoordinatesStopwatch.Start();
         var speakerRectangles = GetSpeakerRectangles(bitmap);
         var mat = bitmap.ToMat();
         var greyMat = mat.Clone();
@@ -58,10 +65,12 @@ public class ActiveSpeakerDetection {
 
         CvInvoke.DrawContours(drawnContoursMat, contours, -1, new MCvScalar(0, 255, 0), 2);
         // CvInvoke.Imshow("drawnContoursMat", drawnContoursMat);
+        GetSpeakerNameBoxCoordinatesStopwatch.Stop();
         return speakerRectangles;
     }
 
     private static List<Rectangle> GetSpeakerRectangles(Bitmap bitmap) {
+        GetSpeakerRectanglesStopwatch.Start();
         Mat inputMat = new Mat();
         Mat workMat = new Mat();
         inputMat.CopyTo(workMat);
@@ -88,27 +97,28 @@ public class ActiveSpeakerDetection {
             speakerRectangles.Add(boundingRectangle);
         }
 
+        GetSpeakerRectanglesStopwatch.Stop();
         return speakerRectangles;
     }
-    
+
     public static string GetActiveSpeakerNameFromImage(Bitmap bitmap) {
         var speakerNameBoxCoordinates = new ActiveSpeakerDetection().GetSpeakerNameBoxCoordinates(bitmap);
         if (speakerNameBoxCoordinates.Count != 1) {
             Console.WriteLine("Expected one but got " + speakerNameBoxCoordinates.Count + " coordinates");
         }
 
+        TesseractStopwatch.Start();
         var nameBox = CropImage(bitmap, speakerNameBoxCoordinates[0]);
         var image = TesseractOCR.Pix.Image.LoadFromMemory(ImageToByte2(nameBox));
         String speakerName;
-        using (var engine = new Engine(@"c:\Program Files\Tesseract-OCR\tessdata\", TesseractOCR.Enums.Language.German)) {
-            var page = engine.Process(image);
-            speakerName = page.Text;
-            page.Dispose();
-        }
+        var page = engine.Process(image);
+        speakerName = page.Text;
+        page.Dispose();
+        TesseractStopwatch.Stop();
 
         return speakerName;
     }
-    
+
     public static Bitmap CropImage(Image source, Rectangle crop) {
         var bmp = new Bitmap(crop.Width, crop.Height);
         using (var gr = Graphics.FromImage(bmp)) {
@@ -124,6 +134,4 @@ public class ActiveSpeakerDetection {
             return stream.ToArray();
         }
     }
-
-    
 }

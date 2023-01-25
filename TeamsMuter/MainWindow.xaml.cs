@@ -55,10 +55,16 @@ namespace TeamsMuter {
             InitializeComponent();
             // HAND_COLOR = Color.FromArgb(255, 230, 182, 116);
             var bitmap = new Bitmap(Image.FromFile(@"C:\Users\strat\PycharmProjects\teamsDetector\jannikSpeaking.png"));
+
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+            for (int i = 0; i < 20; i++) {
+                var speakerName = ActiveSpeakerDetection.GetActiveSpeakerNameFromImage(bitmap);
+                Console.WriteLine(speakerName);
+            }
+            stopwatch.Stop();
+            Console.WriteLine(stopwatch.Elapsed);
             
-            var speakerName = ActiveSpeakerDetection.GetActiveSpeakerNameFromImage(bitmap);
-            
-            Console.WriteLine(speakerName);
         }
 
         
