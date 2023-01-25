@@ -12,12 +12,10 @@ namespace TeamsMuter;
 
 public class ActiveSpeakerDetection {
     public void GetSpeakerNameBoxCoordinates() {
-        Bitmap fromFile =
-            new Bitmap(Image.FromFile(@"C:\Users\strat\PycharmProjects\teamsDetector\jannikSpeaking.png"));
+        Bitmap fromFile = new Bitmap(Image.FromFile(@"C:\Users\strat\PycharmProjects\teamsDetector\jannikSpeaking.png"));
 
         var speakerRectangles = GetSpeakerRectangles(fromFile);
         var mat = fromFile.ToMat();
-        // CvInvoke.cvSetImageROI(mat.Ptr, Rectangle.Empty);
         var greyMat = mat.Clone();
         CvInvoke.CvtColor(mat, greyMat, ColorConversion.Bgr2Gray);
         // CvInvoke.Threshold(mat, mat, 0, 255, ThresholdType.Binary | ThresholdType.Otsu);
@@ -50,7 +48,10 @@ public class ActiveSpeakerDetection {
         for (int i = 0; i < contours.Size; i++) {
             var contour = contours[i];
             var boundingRectangle = CvInvoke.BoundingRectangle(contour);
-            if (boundingRectangle.Width is > 40 and < 100 && boundingRectangle.Height is > 7 and < 50) {
+
+            var hasExpectedSize = boundingRectangle.Width is > 40 and < 100 && boundingRectangle.Height is > 7 and < 50;
+            var isInSpeakerBox = speakerRectangles[0].Contains(boundingRectangle);
+            if (hasExpectedSize && isInSpeakerBox) {
                 speakerNameRectangles.Add(boundingRectangle);
             }
         }
