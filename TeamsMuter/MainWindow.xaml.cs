@@ -17,7 +17,10 @@ using System.Windows.Forms;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Emgu.CV.OCR;
 using NAudio.CoreAudioApi;
+using TesseractOCR;
+using TesseractOCR.Enums;
 using Win32Interop.WinHandles;
 using Application = System.Windows.Application;
 using Color = System.Drawing.Color;
@@ -30,45 +33,57 @@ namespace TeamsMuter {
     /// </summary>
     ///
     public partial class MainWindow : Window {
-        
         //If you get 'dllimport unknown'-, then add 'using System.Runtime.InteropServices;'
         [DllImport("gdi32.dll", EntryPoint = "DeleteObject")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool DeleteObject([In] IntPtr hObject);
-        
-        public ImageSource ImageSourceFromBitmap(Bitmap bmp)
-        {
+
+        public ImageSource ImageSourceFromBitmap(Bitmap bmp) {
             var handle = bmp.GetHbitmap();
-            try
-            {
-                return Imaging.CreateBitmapSourceFromHBitmap(handle, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+            try {
+                return Imaging.CreateBitmapSourceFromHBitmap(handle, IntPtr.Zero, Int32Rect.Empty,
+                    BitmapSizeOptions.FromEmptyOptions());
             }
-            finally { DeleteObject(handle); }               
+            finally {
+                DeleteObject(handle);
+            }
         }
-        private  Color HAND_COLOR;
+
+        private Color HAND_COLOR;
 
         public MainWindow() {
             InitializeComponent();
             // HAND_COLOR = Color.FromArgb(255, 230, 182, 116);
-            new ActiveSpeakerDetection().GetSpeakerNameBoxCoordinates();
+            new ActiveSpeakerDetection().GetSpeakerNameBoxCoordinates(new Bitmap(Image.FromFile(@"C:\Users\strat\PycharmProjects\teamsDetector\jannikSpeaking.png")));
+            var image = TesseractOCR.Pix.Image.LoadFromFile( @"c:\Users\strat\PycharmProjects\teamsDetector\nameBoxJörn.png");
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+            using (var engine = new Engine(@"c:\Program Files\Tesseract-OCR\tessdata\", TesseractOCR.Enums.Language.German)) {
+                for (int i = 0; i < 10; i++) {
+                    var process = engine.Process(image);
+                    process.Dispose();
+                }
+            }
+
+            stopwatch.Stop();
+            Console.WriteLine(stopwatch.Elapsed);
         }
 
         private void ButtonBase_OnClick(object sender, RoutedEventArgs e) {
-            
             Color yellow2 = Color.FromArgb(255, 194, 147, 74);
-            
+
             var projectDir = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent;
             var fullPath = Path.Combine(projectDir.FullName, Path.GetFileName("teamsDemoHand.jpg"));
             // capture.GetPixel(462,462)
             Bitmap bitmap = new Bitmap(fullPath);
             Graphics fromImage = Graphics.FromImage(bitmap);
-            fromImage.FillRectangle(new SolidBrush(Color.Aqua), 10,10,100,100);
+            fromImage.FillRectangle(new SolidBrush(Color.Aqua), 10, 10, 100, 100);
 
             // ImageDrawing imageDrawing = new ImageDrawing();
             // imageDrawing.ImageSource = new BitmapImage(new Uri(fullPath, UriKind.Absolute));
-            DemoImage.Source = ImageSourceFromBitmap(bitmap); 
+            DemoImage.Source = ImageSourceFromBitmap(bitmap);
             // fromFile.Save("demo.jpg", ImageFormat.Jpeg);
-            
+
             Console.WriteLine("");
         }
     }

@@ -11,11 +11,9 @@ using Emgu.CV.Util;
 namespace TeamsMuter;
 
 public class ActiveSpeakerDetection {
-    public void GetSpeakerNameBoxCoordinates() {
-        Bitmap fromFile = new Bitmap(Image.FromFile(@"C:\Users\strat\PycharmProjects\teamsDetector\jannikSpeaking.png"));
-
-        var speakerRectangles = GetSpeakerRectangles(fromFile);
-        var mat = fromFile.ToMat();
+    public void GetSpeakerNameBoxCoordinates(Bitmap bitmap) {
+        var speakerRectangles = GetSpeakerRectangles(bitmap);
+        var mat = bitmap.ToMat();
         var greyMat = mat.Clone();
         CvInvoke.CvtColor(mat, greyMat, ColorConversion.Bgr2Gray);
         // CvInvoke.Threshold(mat, mat, 0, 255, ThresholdType.Binary | ThresholdType.Otsu);
@@ -61,11 +59,11 @@ public class ActiveSpeakerDetection {
         Console.Write(speakerRectangles);
     }
 
-    private static List<Rectangle> GetSpeakerRectangles(Bitmap fromFile) {
+    private static List<Rectangle> GetSpeakerRectangles(Bitmap bitmap) {
         Mat inputMat = new Mat();
         Mat workMat = new Mat();
         inputMat.CopyTo(workMat);
-        CvInvoke.CvtColor(fromFile.ToMat(), workMat, ColorConversion.Bgr2Hsv);
+        CvInvoke.CvtColor(bitmap.ToMat(), workMat, ColorConversion.Bgr2Hsv);
         CvInvoke.InRange(workMat, new ScalarArray(new MCvScalar(96, 65, 210)),
             new ScalarArray(new MCvScalar(121, 125, 247)),
             workMat);

@@ -15,6 +15,7 @@
       <PackageReference Include="NAudio" Version="2.1.0" />
       <PackageReference Include="NAudio.Core" Version="2.1.0" />
       <PackageReference Include="NAudio.WinMM" Version="2.1.0" />
+      <PackageReference Include="TesseractOCR" Version="5.3.1" />
       <PackageReference Include="Win32Interop.WinHandles" Version="2.0.0" />
     </ItemGroup>
 
