@@ -2,16 +2,18 @@
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Drawing;
+using System.IO;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.ImgHash;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
+using TesseractOCR;
 
 namespace TeamsMuter;
 
 public class ActiveSpeakerDetection {
-    public void GetSpeakerNameBoxCoordinates(Bitmap bitmap) {
+    public List<Rectangle> GetSpeakerNameBoxCoordinates(Bitmap bitmap) {
         var speakerRectangles = GetSpeakerRectangles(bitmap);
         var mat = bitmap.ToMat();
         var greyMat = mat.Clone();
@@ -55,8 +57,8 @@ public class ActiveSpeakerDetection {
         }
 
         CvInvoke.DrawContours(drawnContoursMat, contours, -1, new MCvScalar(0, 255, 0), 2);
-        CvInvoke.Imshow("drawnContoursMat", drawnContoursMat);
-        Console.Write(speakerRectangles);
+        // CvInvoke.Imshow("drawnContoursMat", drawnContoursMat);
+        return speakerRectangles;
     }
 
     private static List<Rectangle> GetSpeakerRectangles(Bitmap bitmap) {
@@ -88,4 +90,40 @@ public class ActiveSpeakerDetection {
 
         return speakerRectangles;
     }
+    
+    public static string GetActiveSpeakerNameFromImage(Bitmap bitmap) {
+        var speakerNameBoxCoordinates = new ActiveSpeakerDetection().GetSpeakerNameBoxCoordinates(bitmap);
+        if (speakerNameBoxCoordinates.Count != 1) {
+            Console.WriteLine("Expected one but got " + speakerNameBoxCoordinates.Count + " coordinates");
+        }
+
+        var nameBox = CropImage(bitmap, speakerNameBoxCoordinates[0]);
+        var image = TesseractOCR.Pix.Image.LoadFromMemory(ImageToByte2(nameBox));
+        String speakerName;
+        using (var engine = new Engine(@"c:\Program Files\Tesseract-OCR\tessdata\", TesseractOCR.Enums.Language.German)) {
+            var page = engine.Process(image);
+            speakerName = page.Text;
+            page.Dispose();
+        }
+
+        return speakerName;
+    }
+    
+    public static Bitmap CropImage(Image source, Rectangle crop) {
+        var bmp = new Bitmap(crop.Width, crop.Height);
+        using (var gr = Graphics.FromImage(bmp)) {
+            gr.DrawImage(source, new Rectangle(0, 0, bmp.Width, bmp.Height), crop, GraphicsUnit.Pixel);
+        }
+
+        return bmp;
+    }
+
+    public static byte[] ImageToByte2(Image img) {
+        using (var stream = new MemoryStream()) {
+            img.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+            return stream.ToArray();
+        }
+    }
+
+    
 }

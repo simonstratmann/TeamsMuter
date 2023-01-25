@@ -54,20 +54,15 @@ namespace TeamsMuter {
         public MainWindow() {
             InitializeComponent();
             // HAND_COLOR = Color.FromArgb(255, 230, 182, 116);
-            new ActiveSpeakerDetection().GetSpeakerNameBoxCoordinates(new Bitmap(Image.FromFile(@"C:\Users\strat\PycharmProjects\teamsDetector\jannikSpeaking.png")));
-            var image = TesseractOCR.Pix.Image.LoadFromFile( @"c:\Users\strat\PycharmProjects\teamsDetector\nameBoxJörn.png");
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
-            using (var engine = new Engine(@"c:\Program Files\Tesseract-OCR\tessdata\", TesseractOCR.Enums.Language.German)) {
-                for (int i = 0; i < 10; i++) {
-                    var process = engine.Process(image);
-                    process.Dispose();
-                }
-            }
-
-            stopwatch.Stop();
-            Console.WriteLine(stopwatch.Elapsed);
+            var bitmap = new Bitmap(Image.FromFile(@"C:\Users\strat\PycharmProjects\teamsDetector\jannikSpeaking.png"));
+            
+            var speakerName = ActiveSpeakerDetection.GetActiveSpeakerNameFromImage(bitmap);
+            
+            Console.WriteLine(speakerName);
         }
+
+        
+
 
         private void ButtonBase_OnClick(object sender, RoutedEventArgs e) {
             Color yellow2 = Color.FromArgb(255, 194, 147, 74);
