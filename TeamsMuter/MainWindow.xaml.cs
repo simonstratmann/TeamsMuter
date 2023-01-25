@@ -49,8 +49,8 @@ namespace TeamsMuter {
 
         public MainWindow() {
             InitializeComponent();
-            HAND_COLOR = Color.FromArgb(255, 230, 182, 116);
-            
+            // HAND_COLOR = Color.FromArgb(255, 230, 182, 116);
+            new ActiveSpeakerDetection().bla();
         }
 
         private void ButtonBase_OnClick(object sender, RoutedEventArgs e) {

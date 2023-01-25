@@ -109,12 +109,12 @@ namespace TeamsMuter {
         
         public App() {
             SetProcessDpiAwareness(ProcessDPIAwareness.ProcessDPIUnaware);
-            // var window = TopLevelWindowUtils.FindWindow(wh => wh.GetWindowText().Contains("Meeting in"));
-            // if (!window.IsValid) {
-                // throw new Exception("WIndow not found");
-            // }
+            var window = TopLevelWindowUtils.FindWindow(wh => wh.GetWindowText().Contains("Meeting in"));
+            if (!window.IsValid) {
+                throw new Exception("WIndow not found");
+            }
             // var timer = new System.Timers.Timer(50);
-            // var scalingFactor = GetScalingFactor(window);
+            var scalingFactor = GetScalingFactor(window);
             // timer.Elapsed += (sender, args) => {
             //     var capture = CaptureWindow(window, scalingFactor);
             // Debug.WriteLine("Captured");
