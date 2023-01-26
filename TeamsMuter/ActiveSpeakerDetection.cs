@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.Drawing;
 using System.IO;
+using System.Windows.Xps;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.ImgHash;
@@ -14,18 +15,13 @@ using TesseractOCR;
 namespace TeamsMuter;
 
 public class ActiveSpeakerDetection {
-    public static Stopwatch GetSpeakerNameBoxCoordinatesStopwatch = new Stopwatch();
-    public static Stopwatch GetSpeakerRectanglesStopwatch = new Stopwatch();
-    public static Stopwatch TesseractStopwatch = new Stopwatch();
-    private static Engine engine = new Engine(@"c:\Program Files\Tesseract-OCR\tessdata\", TesseractOCR.Enums.Language.German);
 
-    public List<Rectangle> GetSpeakerNameBoxCoordinates(Bitmap bitmap) {
-        GetSpeakerNameBoxCoordinatesStopwatch.Start();
-        var speakerRectangles = GetActiveSpeakerRectangles(bitmap);
+    public static Rectangle GetSpeakerNameBox(Bitmap bitmap) {
         var mat = bitmap.ToMat();
         var greyMat = mat.Clone();
+        
+        // COmvert to gray
         CvInvoke.CvtColor(mat, greyMat, ColorConversion.Bgr2Gray);
-        // CvInvoke.Threshold(mat, mat, 0, 255, ThresholdType.Binary | ThresholdType.Otsu);
 
         // Bilateral filter
         var blurredMat = greyMat.Clone();
@@ -51,34 +47,27 @@ public class ActiveSpeakerDetection {
         // Find contours
         VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint();
         CvInvoke.FindContours(closedMat, contours, new Mat(), RetrType.List, ChainApproxMethod.ChainApproxSimple);
-        var drawnContoursMat = mat.Clone();
-        List<Rectangle> speakerNameRectangles = new List<Rectangle>();
+        
         for (int i = 0; i < contours.Size; i++) {
             var contour = contours[i];
             var boundingRectangle = CvInvoke.BoundingRectangle(contour);
 
             var hasExpectedSize = boundingRectangle.Width is > 40 and < 100 && boundingRectangle.Height is > 7 and < 50;
-            var isInSpeakerBox = speakerRectangles[0].Contains(boundingRectangle);
-            if (hasExpectedSize && isInSpeakerBox) {
-                speakerNameRectangles.Add(boundingRectangle);
+            if (hasExpectedSize) {
+                return boundingRectangle;
             }
+           
         }
 
-        CvInvoke.DrawContours(drawnContoursMat, contours, -1, new MCvScalar(0, 255, 0), 2);
-        CvInvoke.Imshow("drawnContoursMat", drawnContoursMat);
-        GetSpeakerNameBoxCoordinatesStopwatch.Stop();
-        return speakerRectangles;
+        return default;
     }
 
-    private static List<Rectangle> GetActiveSpeakerRectangles(Bitmap bitmap) {
-        GetSpeakerRectanglesStopwatch.Start();
+    private static List<Rectangle> GetActiveSpeakerNameBoxes(Bitmap bitmap) {
         Mat inputMat = new Mat();
         Mat workMat = new Mat();
         inputMat.CopyTo(workMat);
         CvInvoke.CvtColor(bitmap.ToMat(), workMat, ColorConversion.Bgr2Hsv);
-        CvInvoke.InRange(workMat, new ScalarArray(new MCvScalar(96, 65, 210)),
-            new ScalarArray(new MCvScalar(121, 125, 247)),
-            workMat);
+        CvInvoke.InRange(workMat, new ScalarArray(new MCvScalar(96, 65, 210)), new ScalarArray(new MCvScalar(121, 125, 247)), workMat);
         var structuringElement =
             CvInvoke.GetStructuringElement(ElementShape.Rectangle, new Size(3, 3), Point.Empty);
         CvInvoke.MorphologyEx(workMat, workMat, MorphOp.Dilate, structuringElement, Point.Empty, 2,
@@ -87,9 +76,9 @@ public class ActiveSpeakerDetection {
         CvInvoke.MorphologyEx(workMat, workMat, MorphOp.Erode, structuringElement, Point.Empty, 2,
             BorderType.Reflect101,
             new MCvScalar());
-        Emgu.CV.Util.VectorOfVectorOfPoint contours = new Emgu.CV.Util.VectorOfVectorOfPoint();
+        VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint();
         CvInvoke.FindContours(workMat, contours, new Mat(), RetrType.External, ChainApproxMethod.ChainApproxSimple);
-        List<Rectangle> speakerRectangles = new List<Rectangle>();
+        var speakerNameBoxes = new List<Rectangle>();
         for (int i = 0; i < contours.Size; i++) {
             var contour = contours[i];
             var contourPoly = new VectorOfPoint();
@@ -109,32 +98,38 @@ public class ActiveSpeakerDetection {
                 // The name box is in the lower part of the image
                 boundingRectangle.Y = boundingRectangle.Y + boundingRectangle.Height - (int)(boundingRectangle.Height * 0.1);
                 boundingRectangle.Height = (int)(boundingRectangle.Height * 0.1);
+                // We need to find the text only part
             }
-
-            speakerRectangles.Add(boundingRectangle);
+            speakerNameBoxes.Add( boundingRectangle);
         }
 
-        GetSpeakerRectanglesStopwatch.Stop();
-        return speakerRectangles;
+        return speakerNameBoxes;
     }
 
     public static string GetActiveSpeakerNameFromImage(Bitmap bitmap) {
-        var speakerNameBoxCoordinates = GetActiveSpeakerRectangles(bitmap);
+        var speakerNameBoxCoordinates = GetActiveSpeakerNameBoxes(bitmap);
         if (speakerNameBoxCoordinates.Count != 1) {
             Console.WriteLine("Expected one but got " + speakerNameBoxCoordinates.Count + " coordinates");
+            //todo multiple active
         }
 
-        TesseractStopwatch.Start();
-        var nameBox = CropImage(bitmap, speakerNameBoxCoordinates[0]);
-        CvInvoke.Imshow("", nameBox.ToMat());
-        var image = TesseractOCR.Pix.Image.LoadFromMemory(ImageToByte2(nameBox));
-        String speakerName;
-        var page = engine.Process(image);
-        speakerName = page.Text;
-        page.Dispose();
-        TesseractStopwatch.Stop();
+        var croppedImage  = CropImage(bitmap, speakerNameBoxCoordinates[0]);
 
-        return speakerName;
+        var nameBox = GetSpeakerNameBox(croppedImage);
+        var matWithSpeakerBoxRectangle = bitmap.ToMat();
+        CvInvoke.Rectangle(matWithSpeakerBoxRectangle, nameBox, new MCvScalar(0,255,0), 1, LineType.Filled);
+        CvInvoke.Imshow("speakerbox",matWithSpeakerBoxRectangle);
+        
+        // var process = engine.Process(TesseractOCR.Pix.Image.LoadFromFile(@"C:\Users\strat\PycharmProjects\teamsDetector\nameBoxHaukeInverted.png"));
+        // process.Dispose();
+        // var image = TesseractOCR.Pix.Image.LoadFromMemory(ImageToByte2(nameBox));
+        // String speakerName;
+        // var page = engine.Process(image);
+        // speakerName = page.Text;
+        // page.Dispose();
+        // TesseractStopwatch.Stop();
+
+        return "speakerName";
     }
 
     public static Bitmap CropImage(Image source, Rectangle crop) {
