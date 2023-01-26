@@ -54,20 +54,19 @@ namespace TeamsMuter {
         public MainWindow() {
             InitializeComponent();
             // HAND_COLOR = Color.FromArgb(255, 230, 182, 116);
-            var bitmap = new Bitmap(Image.FromFile(@"C:\Users\strat\PycharmProjects\teamsDetector\jannikSpeaking.png"));
+            // var bitmap = new Bitmap(Image.FromFile(@"C:\Users\strat\PycharmProjects\teamsDetector\teamscall sharing speaker no video.png"));
+            var bitmap = new Bitmap(Image.FromFile(@"C:\Users\strat\PycharmProjects\teamsDetector\teamscall sharing names.png"));
 
-            Stopwatch stopwatch = new Stopwatch();
-            stopwatch.Start();
-            for (int i = 0; i < 20; i++) {
-                var speakerName = ActiveSpeakerDetection.GetActiveSpeakerNameFromImage(bitmap);
-                Console.WriteLine(speakerName);
-            }
-            stopwatch.Stop();
-            Console.WriteLine(stopwatch.Elapsed);
-            
+            var speakerName = ActiveSpeakerDetection.GetActiveSpeakerNameFromImage(bitmap);
+            Console.WriteLine(speakerName);
+            Debug.WriteLine(speakerName);
+            // Stopwatch stopwatch = new Stopwatch();
+            // stopwatch.Start();
+            // for (int i = 0; i < 20; i++) {
+            // }
+            // stopwatch.Stop();
+            // Console.WriteLine(stopwatch.Elapsed);
         }
-
-        
 
 
         private void ButtonBase_OnClick(object sender, RoutedEventArgs e) {

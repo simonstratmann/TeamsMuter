@@ -21,7 +21,7 @@ public class ActiveSpeakerDetection {
 
     public List<Rectangle> GetSpeakerNameBoxCoordinates(Bitmap bitmap) {
         GetSpeakerNameBoxCoordinatesStopwatch.Start();
-        var speakerRectangles = GetSpeakerRectangles(bitmap);
+        var speakerRectangles = GetActiveSpeakerRectangles(bitmap);
         var mat = bitmap.ToMat();
         var greyMat = mat.Clone();
         CvInvoke.CvtColor(mat, greyMat, ColorConversion.Bgr2Gray);
@@ -46,6 +46,7 @@ public class ActiveSpeakerDetection {
         structuringElement = CvInvoke.GetStructuringElement(ElementShape.Rectangle, new Size(5, 1), Point.Empty);
         CvInvoke.MorphologyEx(blackWhiteMat, closedMat, MorphOp.Close, structuringElement, Point.Empty, 1,
             BorderType.Constant, new MCvScalar());
+        CvInvoke.Imshow("closed", closedMat);
 
         // Find contours
         VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint();
@@ -64,12 +65,12 @@ public class ActiveSpeakerDetection {
         }
 
         CvInvoke.DrawContours(drawnContoursMat, contours, -1, new MCvScalar(0, 255, 0), 2);
-        // CvInvoke.Imshow("drawnContoursMat", drawnContoursMat);
+        CvInvoke.Imshow("drawnContoursMat", drawnContoursMat);
         GetSpeakerNameBoxCoordinatesStopwatch.Stop();
         return speakerRectangles;
     }
 
-    private static List<Rectangle> GetSpeakerRectangles(Bitmap bitmap) {
+    private static List<Rectangle> GetActiveSpeakerRectangles(Bitmap bitmap) {
         GetSpeakerRectanglesStopwatch.Start();
         Mat inputMat = new Mat();
         Mat workMat = new Mat();
@@ -94,6 +95,22 @@ public class ActiveSpeakerDetection {
             var contourPoly = new VectorOfPoint();
             CvInvoke.ApproxPolyDP(contour, contourPoly, 3, true);
             var boundingRectangle = CvInvoke.BoundingRectangle(contourPoly);
+            if (CvInvoke.ContourArea(contour) < 1000) {
+                continue;
+            }
+
+            if (contourPoly.Size > 10) {
+                //The shape of the indicator is a circle (indicated by the number of points being more than 4, but 10 to be sure) when there's no video
+                //In that case the name of the speaker is below the circle so we just expand the bounding box a bit
+                boundingRectangle.Y += boundingRectangle.Height;
+                boundingRectangle.Height = 50;
+            }
+            else {
+                // The name box is in the lower part of the image
+                boundingRectangle.Y = boundingRectangle.Y + boundingRectangle.Height - (int)(boundingRectangle.Height * 0.1);
+                boundingRectangle.Height = (int)(boundingRectangle.Height * 0.1);
+            }
+
             speakerRectangles.Add(boundingRectangle);
         }
 
@@ -102,13 +119,14 @@ public class ActiveSpeakerDetection {
     }
 
     public static string GetActiveSpeakerNameFromImage(Bitmap bitmap) {
-        var speakerNameBoxCoordinates = new ActiveSpeakerDetection().GetSpeakerNameBoxCoordinates(bitmap);
+        var speakerNameBoxCoordinates = GetActiveSpeakerRectangles(bitmap);
         if (speakerNameBoxCoordinates.Count != 1) {
             Console.WriteLine("Expected one but got " + speakerNameBoxCoordinates.Count + " coordinates");
         }
 
         TesseractStopwatch.Start();
         var nameBox = CropImage(bitmap, speakerNameBoxCoordinates[0]);
+        CvInvoke.Imshow("", nameBox.ToMat());
         var image = TesseractOCR.Pix.Image.LoadFromMemory(ImageToByte2(nameBox));
         String speakerName;
         var page = engine.Process(image);
